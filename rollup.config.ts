@@ -1,16 +1,10 @@
 /// <reference types="node" />
 import { basename, resolve } from 'node:path'
 
-import alias from '@rollup/plugin-alias'
 import commonjs from '@rollup/plugin-commonjs'
 import { nodeResolve } from '@rollup/plugin-node-resolve'
 import replace from '@rollup/plugin-replace'
-import type {
-  ModuleFormat,
-  OutputOptions,
-  RollupCache,
-  RollupOptions
-} from 'rollup'
+import type { ModuleFormat, OutputOptions, RollupCache, RollupOptions } from 'rollup'
 import dts from 'rollup-plugin-dts'
 import { defineRollupSwcOption, swc } from 'rollup-plugin-swc3'
 import { fileURLToPath } from 'url'
@@ -22,10 +16,8 @@ const dtsOutput = new Set<[string, string]>()
 const outputDir = fileURLToPath(new URL('dist', import.meta.url))
 
 const external = [
-  '@emotion/react',
-  '@emotion/styled',
-  '@emotion/react/jsx-runtime',
-  '@emotion/react/jsx-dev-runtime',
+  'styled-components',
+  '@mui/styled-engine-sc',
   '@mui/icons-material',
   '@mui/material',
   '@mui/material/styles',
@@ -39,10 +31,9 @@ const external = [
   'react-dom',
   'react-dom/client'
 ]
-const outputMatrix = (
-  name: string, format: ModuleFormat[]): OutputOptions[] => {
+const outputMatrix = (name: string, format: ModuleFormat[]): OutputOptions[] => {
   const baseName = basename(name)
-  return format.flatMap(format => ({
+  return format.flatMap((format) => ({
     file: resolve(outputDir, `${baseName}.${format === 'es' ? 'm' : ''}js`),
     sourcemap: false,
     name: 'JsonViewer',
@@ -55,11 +46,15 @@ const outputMatrix = (
   }))
 }
 
-const buildMatrix = (input: string, output: string, config: {
-  format: ModuleFormat[]
-  browser: boolean
-  dts: boolean
-}): RollupOptions => {
+const buildMatrix = (
+  input: string,
+  output: string,
+  config: {
+    format: ModuleFormat[]
+    browser: boolean
+    dts: boolean
+  }
+): RollupOptions => {
   if (config.dts) {
     dtsOutput.add([input, output])
   }
@@ -69,43 +64,30 @@ const buildMatrix = (input: string, output: string, config: {
     cache,
     external: config.browser ? [] : external,
     plugins: [
-      alias({
-        entries: config.browser
-          ? []
-          : [
-              { find: 'react', replacement: '@emotion/react' },
-              {
-                find: 'react/jsx-dev-runtime',
-                replacement: '@emotion/react/jsx-dev-runtime'
-              },
-              {
-                find: 'react/jsx-runtime',
-                replacement: '@emotion/react/jsx-runtime'
-              }
-            ]
-      }),
-      config.browser && replace({
-        preventAssignment: true,
-        'process.env.NODE_ENV': JSON.stringify('production'),
-        'typeof window': JSON.stringify('object')
-      }),
+      config.browser &&
+        replace({
+          preventAssignment: true,
+          'process.env.NODE_ENV': JSON.stringify('production'),
+          'typeof window': JSON.stringify('object')
+        }),
       commonjs(),
       nodeResolve(),
-      swc(defineRollupSwcOption({
-        jsc: {
-          externalHelpers: true,
-          parser: {
-            syntax: 'typescript',
-            tsx: true
-          },
-          transform: {
-            react: {
-              runtime: 'automatic',
-              importSource: '@emotion/react'
+      swc(
+        defineRollupSwcOption({
+          jsc: {
+            externalHelpers: true,
+            parser: {
+              syntax: 'typescript',
+              tsx: true
+            },
+            transform: {
+              react: {
+                runtime: 'automatic'
+              }
             }
           }
-        }
-      }))
+        })
+      )
     ]
   }
 }
@@ -118,9 +100,7 @@ const dtsMatrix = (): RollupOptions[] => {
       file: resolve(outputDir, `${output}.d.ts`),
       format: 'es'
     },
-    plugins: [
-      dts()
-    ]
+    plugins: [dts()]
   }))
 }
 
